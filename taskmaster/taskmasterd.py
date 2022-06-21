@@ -1,2 +1,11 @@
+from .sock	import ServerManager
+
 def main():
-	print('taskmasterd')
+	server = ServerManager()
+	while True:
+		server.listen()
+		while True:
+			cmd = server.getCommand()
+			if not cmd:
+				break
+			print(cmd)
