@@ -9,15 +9,15 @@ class ProgramProperty:
 
 class Program:
     def __init__(self, program: dict) -> None:
-        try: 
-            self.parse(program)
-        except Exception as exc:
-            raise exc
-        self.launch()
+        self.parse(program)
+        self.process = []
+        self.start()
 
     def parse(self, program: dict) -> None:
         program_description = {
             'command': ProgramProperty(str, None, True),
+            'numprocs': ProgramProperty(int, 1, False),
+            'stopsignal': ProgramProperty(str, 'TERM', False),
         }
         for property in program.keys():
             if property not in program_description.keys():
@@ -33,6 +33,19 @@ class Program:
                 raise Exception(prop_name + ': found ' + str(type(program[prop_name])) + ', ' + str(prop.type) + ' expected')
             self.__setattr__(prop_name, program[prop_name])
 
-    def launch(self):
+    def start(self):
         null = open('/dev/null', 'r')
-        self.process = subprocess.Popen(self.command, stdin=null, stdout=null, stderr=null)
+        for index in range(self.numprocs):
+            self.process.append(subprocess.Popen(self.command, stdin=null, stdout=null, stderr=null))
+    
+    def stop(self):
+        for proc in self.process:
+            os.kill(proc, signal.TERM) # add self.stopsignal
+        self.process = []
+
+    def restart(self):
+        self.stop()
+        self.start()
+    
+    def status(self):
+        pass
