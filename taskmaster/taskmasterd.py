@@ -2,7 +2,9 @@ import os
 import sys
 import argparse
 import yaml
+
 from .program import Program
+from .sock	import ServerManager
 
 PID_FILE = '/tmp/taskmaster.pid'
 
@@ -63,6 +65,11 @@ def main():
 				program_list.append(Program(config['programs'][program]))
 			except Exception as exc:
 				print(program + ':', exc)
+	server = ServerManager()
 	while True:
-		continue 
-	
+		server.listen()
+		while True:
+			cmd = server.getCommand()
+			if not cmd:
+				break
+			print(cmd)
