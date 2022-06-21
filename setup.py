@@ -4,6 +4,7 @@ setup(
 	name='Taskmaster',
 	description='This program is a job control task.',
 	long_description_content_type='text/markdown',
+	requires=['pyyaml'],
 	packages=find_packages(include=[
 		'taskmaster', 'taskmaster.*',
 	]),
