@@ -45,7 +45,7 @@ def daemonize():
 	return
 
 def main():
-	program_list = []
+	program_list = dict()
 
 	parser = argparse.ArgumentParser(description='Taskmaster daemon')
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
@@ -62,7 +62,7 @@ def main():
 				print('Program', program, 'should not be empty')
 				return 1
 			try:
-				program_list.append(Program(config['programs'][program]))
+				program_list[program] = Program(config['programs'][program])
 			except Exception as exc:
 				print(program + ':', exc)
 	server = ServerManager()

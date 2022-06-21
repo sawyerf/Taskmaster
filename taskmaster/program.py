@@ -8,7 +8,6 @@ class ProgramProperty:
         self.required = required
 
 class Program:
-
     def __init__(self, program: dict) -> None:
         try: 
             self.parse(program)
