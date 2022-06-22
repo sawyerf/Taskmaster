@@ -61,10 +61,10 @@ def main():
 			if not config['programs'][program]:
 				print('Program', program, 'should not be empty')
 				return 1
-			try:
-				program_list[program] = Program(config['programs'][program])
-			except Exception as exc:
-				print(program + ':', exc)
+			program_list[program] = Program(config['programs'][program])
+	for prog in program_list:
+		print(prog)
+		# program_list[prog].stop()
 	server = ServerManager()
 	while True:
 		server.listen()

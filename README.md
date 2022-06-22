@@ -16,5 +16,5 @@ sudo ./dev.sh
 
 
 ## Links
-[Subject en](https://cdn.intra.42.fr/pdf/pdf/48700/en.subject.pdf)
-[Supervisor Github](https://github.com/Supervisor/supervisor)
+- [Subject en](https://cdn.intra.42.fr/pdf/pdf/48700/en.subject.pdf)
+- [Supervisor Github](https://github.com/Supervisor/supervisor)
