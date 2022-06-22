@@ -65,6 +65,9 @@ def main():
 				program_list[program] = Program(config['programs'][program])
 			except Exception as exc:
 				print(program + ':', exc)
+	for prog in program_list:
+		print(prog)
+		program_list[prog].stop()
 	server = ServerManager()
 	while True:
 		server.listen()
