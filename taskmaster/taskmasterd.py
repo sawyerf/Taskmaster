@@ -67,7 +67,7 @@ def main():
 				print(program + ':', exc)
 	for prog in program_list:
 		print(prog)
-		program_list[prog].stop()
+		# program_list[prog].stop()
 	server = ServerManager()
 	while True:
 		server.listen()
