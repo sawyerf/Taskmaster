@@ -64,11 +64,11 @@ class Process(subprocess.Popen):
 		# 	pass # Fail
 
 	def myStop(self, stopsignal, stoptime):
-		proc.send_signal(stopsignal)
+		self.send_signal(stopsignal)
 		try:
-			proc.wait(stoptime)
+			self.wait(stoptime)
 		except subprocess.TimeoutExpired:
-			proc.kill()
+			self.kill()
 			print('Force kill')
 
 class Program(ProgramParse):
