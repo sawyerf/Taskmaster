@@ -2,6 +2,7 @@ from email.policy import default
 import subprocess
 from .signal import signals
 import os
+import datetime
 
 class ProgramProperty:
 	def __init__(self, type, default, required=False):

@@ -18,13 +18,27 @@ def main():
 	if sock is None:
 		exit(1)
 	# print(sock.recv(1024))
-	while True:
-		try:
-			cmd = input('taskmaster> ')
-			if not parseCommand(cmd):
-				continue
-		except EOFError:
-			print()
-			break
+	if len(argv) == 1:
+		while True:
+			try:
+				cmd = input('taskmaster> ')
+				if not parseCommand(cmd):
+					continue
+			except EOFError:
+				print()
+				break
+			sock.send(cmd.encode())
+	else:
+		cmd = ' '.join(argv[1:])
+		if not parseCommand(cmd):
+			return
 		sock.send(cmd.encode())
+		while True:
+			try:
+				data = sock.recv(1024)
+			except BrokenPipeError or ConnectionError:
+				break
+			print(data.decode())
+			if b'\x00\x00\x00\x00\x00' in data:	
+				break
 	sock.close()
