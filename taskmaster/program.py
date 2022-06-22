@@ -45,6 +45,32 @@ class ProgramParse:
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name)
 
+class Process(subprocess.Popen):
+	def __init__(self, cmd, env, workingdir, umask):
+		null = open('/dev/null', 'r')
+		super().__init__(shlex.split(cmd),
+			env=env,
+			cwd=workingdir,
+			umask=umask,
+			stdin=null, stdout=null, stderr=null
+		)
+
+	def myWait(self):
+		returnCode = self.wait()
+		print(returnCode)
+		# if returnCode in self.exitcodes:
+		# 	pass # Success
+		# else:
+		# 	pass # Fail
+
+	def myStop(self, stopsignal, stoptime):
+		proc.send_signal(stopsignal)
+		try:
+			proc.wait(stoptime)
+		except subprocess.TimeoutExpired:
+			proc.kill()
+			print('Force kill')
+
 class Program(ProgramParse):
 	def __init__(self, program: dict) -> None:
 		self.parse(program)
@@ -55,36 +81,21 @@ class Program(ProgramParse):
 		if self.autostart:
 			self.start()
 
-	def wait(self, process):
-		returnCode = process.wait()
-		print(returnCode)
-		# if returnCode in self.exitcodes:
-		# 	pass # Success
-		# else:
-		# 	pass # Fail
-
 	def start(self):
-		null = open('/dev/null', 'r')
 		for index in range(self.numprocs):
-			sub = subprocess.Popen(shlex.split(self.cmd),
+			process = Process(self.cmd,
 				env=self.env,
-				cwd=self.workingdir,
+				workingdir=self.workingdir,
 				umask=self.umask,
-				stdin=null, stdout=null, stderr=null
 			)
-			thr = threading.Thread(target=self.wait, args=(sub,))
+			# print(process.pid)
+			thr = threading.Thread(target=process.myWait)
 			thr.start()
-			self.process.append(sub)
+			self.process.append(process)
 	
 	def stop(self):
-		for proc in self.process:
-			proc.send_signal(signals[self.stopsignal])
-			try:
-				proc.wait(self.stoptime)
-			except subprocess.TimeoutExpired:
-				proc.kill()
-				print('Force kill')
-			# print('lol', proc.pid)
+		for process in self.process:
+			process.myStop(signals[self.stopsignal], self.stoptime)
 		self.process = []
 
 	def restart(self):
