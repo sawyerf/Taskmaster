@@ -6,6 +6,7 @@ import yaml
 from .program import Program
 from .sock	import ServerManager
 from .controller import Controller
+from .log import log
 
 
 PID_FILE = '/tmp/taskmaster.pid'
@@ -49,6 +50,7 @@ def daemonize():
 def main():
 	program_list = dict()
 
+	log.Info(f'Start {sys.argv}')
 	parser = argparse.ArgumentParser(description='Taskmaster daemon')
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
 	args = parser.parse_args()

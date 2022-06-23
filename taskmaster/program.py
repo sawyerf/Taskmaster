@@ -7,10 +7,11 @@ from .signal import signals
 from .log import log
 
 class ProgramProperty:
-	def __init__(self, type, default, required=False):
+	def __init__(self, type, default, required=False, mustIn=None):
 		self.type = type
 		self.default = default
 		self.required = required
+		self.mustIn = mustIn
 
 class ProgramParse:
 	'''
@@ -19,7 +20,7 @@ class ProgramParse:
 	PARSER={
 		'cmd': ProgramProperty(str, None, True),
 		'numprocs': ProgramProperty(int, 1, False),
-		'stopsignal': ProgramProperty(str, 'TERM', False),
+		'stopsignal': ProgramProperty(str, 'TERM', False, signals.keys()),
 		'env': ProgramProperty(dict, {}, False),
 		'workingdir': ProgramProperty(str, None, False),
 		'autostart': ProgramProperty(bool, True, False),
@@ -28,6 +29,7 @@ class ProgramParse:
 		'exitcodes': ProgramProperty(list, [0], False),
 		'startretries': ProgramProperty(int, 0, False),
 		'starttime': ProgramProperty(int, -1, False),
+		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
 	}
 
 	def parseUni(self, program: dict, prop_name):
@@ -44,6 +46,8 @@ class ProgramParse:
 			for i in program[prop_name]:
 				if type(i) is not int:
 					raise Exception(f'{prop_name}: found {type(i)}, int expected')
+		if prop.mustIn is not None and program[prop_name] not in prop.mustIn:
+			raise Exception(f'\'{prop_name}\': {program[prop_name]} not in {prop.mustIn}')
 		self.__setattr__(prop_name, program[prop_name])
 
 	def parse(self, program: dict):
@@ -86,16 +90,21 @@ class Process(subprocess.Popen):
 	def myWait(self, exitcodes):
 		returnCode = self.wait()
 		diffTime = datetime.datetime.now() - self.start_time
-		if self.options.starttime >= diffTime.total_seconds():
-			log.Error(f'{self.name}: End badly, fail at {diffTime}')
-		elif returnCode in exitcodes:
+		if returnCode in exitcodes and self.options.starttime < diffTime.total_seconds():
 			log.Info(f'{self.name}: End successfuly with code {returnCode}')
+			if self.options.autorestart != 'always':
+				return
 		else:
-			log.Error(f'{self.name}: End badly with code {returnCode}')
-			if not self.gracefulStop and self.retry > 0:
-				log.Info(f'Restart process ({self.name})')
-				self.myStart()
-				self.retry -= 1
+			if returnCode not in exitcodes:
+				log.Error(f'{self.name}: End badly with code {returnCode}')
+			else:
+				log.Error(f'{self.name}: End badly, fail at {diffTime}')
+			if self.options.autorestart not in ['always', 'unexpected']:
+				return
+		if not self.gracefulStop and self.retry > 0:
+			log.Info(f'Restart process ({self.name})')
+			self.myStart()
+			self.retry -= 1
 
 	def myStop(self, stopsignal, stoptime):
 		if not self.start:
