@@ -1,14 +1,18 @@
+from time import time, strftime, gmtime
+
+TRUN=time()
+
 class log:
 	cache='/tmp/taskmaster.log'
 
 	def Info(*msg, end='\n'):
-		log.print('\33[1;36m', '[*] ', msg, end, True)
+		log.print('\33[1;36m', '[*] ', msg, end)
 
 	def Warning(*msg, end='\n'):
-		log.print('\33[1;33m', '[!] ', msg, end, True)
+		log.print('\33[1;33m', '[!] ', msg, end)
 
 	def Error(*msg, end='\n'):
-		log.print('\33[1;31m', '[!] ', msg, end, False)
+		log.print('\33[1;31m', '[!] ', msg, end)
 
 	def Join(msgs):
 		fin = ''

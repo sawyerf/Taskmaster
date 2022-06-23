@@ -7,6 +7,7 @@ from .program import Program
 from .sock	import ServerManager
 from .controller import Controller
 
+
 PID_FILE = '/tmp/taskmaster.pid'
 
 def parse_config(config_file: argparse.FileType) -> dict:
@@ -63,9 +64,6 @@ def main():
 				print('Program', program, 'should not be empty')
 				return 1
 			program_list[program] = Program(config['programs'][program], program)
-	for prog in program_list:
-		print(prog)
-		# program_list[prog].stop()
 	server = ServerManager()
 	controller = Controller(program_list)
 	while True:

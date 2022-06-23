@@ -38,6 +38,7 @@ def main():
 				data = sock.recv(1024)
 			except BrokenPipeError or ConnectionError:
 				break
+			# If Connection stop during this loop it make a infinite loop
 			print(data.decode())
 			if b'\x00\x00\x00\x00\x00' in data:	
 				break
