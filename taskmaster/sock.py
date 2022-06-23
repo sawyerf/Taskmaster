@@ -44,6 +44,19 @@ class ServerManager:
 				self.sock.close()
 				self.sock = None
 				return None
+	
+	def respond(self, response):
+		try:
+			self.sock.send(response)
+		except ConnectionResetError or BrokenPipeError():
+			print('[*] Connection end')
+			self.sock.close()
+			self.sock = None
+			return None
+
+	def disconnect(self):
+		self.sock.close()
+		self.sock = None
 
 
 def connect():

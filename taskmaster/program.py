@@ -1,9 +1,7 @@
-# from email.policy import default
 import subprocess
 import shlex
-import os
+import datetime
 import threading
-import time
 
 from .signal import signals
 
@@ -45,46 +43,73 @@ class ProgramParse:
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name)
 
-class Program(ProgramParse):
-	def __init__(self, program: dict) -> None:
-		self.parse(program)
-		self.process = []
-		self.launch()
+class Process(subprocess.Popen):
+	def __init__(self, cmd, env, workingdir, umask, name):
+		null = open('/dev/null', 'r')
+		super().__init__(shlex.split(cmd),
+			env=env,
+			cwd=workingdir,
+			umask=umask,
+			stdin=null, stdout=null, stderr=null
+		)
+		self.start_time = datetime.datetime.now()
+		self.name = name
 
-	def launch(self):
-		if self.autostart:
-			self.start()
-
-	def wait(self, process):
-		returnCode = process.wait()
+	def myWait(self):
+		returnCode = self.wait()
 		print(returnCode)
 		# if returnCode in self.exitcodes:
 		# 	pass # Success
 		# else:
 		# 	pass # Fail
 
+	def myStop(self, stopsignal, stoptime):
+		self.send_signal(stopsignal)
+		try:
+			self.wait(stoptime)
+		except subprocess.TimeoutExpired:
+			self.kill()
+			print('Force kill')
+	def get_state(self):
+		return "RUNNING"
+
+	def status(self):
+		uptime = datetime.datetime.now() - self.start_time
+		hours = uptime.total_seconds() // 3600
+		minutes = (uptime.total_seconds() % 3600) // 60
+		seconds = int(uptime.total_seconds() % 60)
+		return f"{self.name:15}{self.get_state():8} pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
+
+class Program(ProgramParse):
+	def __init__(self, program: dict, name: str) -> None:
+		self.parse(program)
+		self.process = []
+		self.name = name
+		self.launch()
+
+	def launch(self):
+		if self.autostart:
+			self.start()
+
 	def start(self):
-		null = open('/dev/null', 'r')
 		for index in range(self.numprocs):
-			sub = subprocess.Popen(shlex.split(self.cmd),
+			name = self.name
+			if index:
+				name += f"_{index}"
+			process = Process(self.cmd,
 				env=self.env,
-				cwd=self.workingdir,
+				workingdir=self.workingdir,
 				umask=self.umask,
-				stdin=null, stdout=null, stderr=null
+				name=name
 			)
-			thr = threading.Thread(target=self.wait, args=(sub,))
+			# print(process.pid)
+			thr = threading.Thread(target=process.myWait)
 			thr.start()
-			self.process.append(sub)
+			self.process.append(process)
 	
 	def stop(self):
-		for proc in self.process:
-			proc.send_signal(signals[self.stopsignal])
-			try:
-				proc.wait(self.stoptime)
-			except subprocess.TimeoutExpired:
-				proc.kill()
-				print('Force kill')
-			# print('lol', proc.pid)
+		for process in self.process:
+			process.myStop(signals[self.stopsignal], self.stoptime)
 		self.process = []
 
 	def restart(self):
@@ -92,4 +117,7 @@ class Program(ProgramParse):
 		self.start()
 	
 	def status(self):
-		pass
+		status = f"{self.name}: \n"
+		for process in self.process:
+			status += process.status()
+		return status

@@ -5,6 +5,7 @@ import yaml
 
 from .program import Program
 from .sock	import ServerManager
+from .controller import Controller
 
 PID_FILE = '/tmp/taskmaster.pid'
 
@@ -23,7 +24,7 @@ def daemonize():
 		os.close(w)
 		r = os.fdopen(r)
 		r.read()
-		sys.exit(0)
+		exit()
 	else:
 		os.close(r)
 		w = os.fdopen(w, 'w')
@@ -33,9 +34,9 @@ def daemonize():
 			exit()
 		else:
 			null = open('/dev/null', 'r+')
-			os.dup2(sys.stdin.fileno(), null.fileno())
-			os.dup2(sys.stdout.fileno(), null.fileno())
-			os.dup2(sys.stderr.fileno(), null.fileno())
+			# os.dup2(null.fileno(), sys.stdin.fileno())
+			# os.dup2(null.fileno(), sys.stdout.fileno())
+			# os.dup2(null.fileno(), sys.stderr.fileno())
 			os.umask(0)
 			os.chdir('/')
 			with open(PID_FILE, 'w+') as stream:
@@ -61,15 +62,20 @@ def main():
 			if not config['programs'][program]:
 				print('Program', program, 'should not be empty')
 				return 1
-			program_list[program] = Program(config['programs'][program])
+			program_list[program] = Program(config['programs'][program], program)
 	for prog in program_list:
 		print(prog)
 		# program_list[prog].stop()
 	server = ServerManager()
+	controller = Controller(program_list)
 	while True:
 		server.listen()
 		while True:
 			cmd = server.getCommand()
 			if not cmd:
 				break
-			print(cmd)
+			command = cmd.split(' ')[0]
+			arg = cmd.split(' ')[1]
+			response = getattr(controller, command)(arg)
+			server.respond(response.encode())
+			server.respond(b'\x00\x00\x00\x00\x00')
