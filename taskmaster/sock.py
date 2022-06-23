@@ -1,6 +1,8 @@
 import socket
 import os
 
+from .log import log
+
 SOCK_FILE = '/tmp/taskmaster.sock'
 
 class ServerManager:
@@ -22,7 +24,7 @@ class ServerManager:
 	def listen(self):
 		self.sock, addr = self.server.accept()
 		self.sock.setblocking(False)
-		print(f'[*] New Connection')
+		log.Info(f'New Connection')
 
 	def getCommand(self):
 		while True:
@@ -31,7 +33,7 @@ class ServerManager:
 				if cmd != b'':
 					return cmd.decode(errors='ignore')
 			except ConnectionResetError:
-				print('[*] Connection end')
+				log.Info('Connection end')
 				self.sock.close()
 				self.sock = None
 				return None
@@ -40,7 +42,7 @@ class ServerManager:
 			try:
 				self.sock.send(b'')
 			except BrokenPipeError:
-				print('[*] Connection end')
+				log.Info('Connection end')
 				self.sock.close()
 				self.sock = None
 				return None
@@ -49,7 +51,7 @@ class ServerManager:
 		try:
 			self.sock.send(response)
 		except ConnectionResetError or BrokenPipeError():
-			print('[*] Connection end')
+			log.Info('Connection end')
 			self.sock.close()
 			self.sock = None
 			return None

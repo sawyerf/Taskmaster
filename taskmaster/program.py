@@ -4,24 +4,34 @@ import datetime
 import threading
 
 from .signal import signals
+from .log import log
 
 class ProgramProperty:
-	def __init__(self, type, default, required=False):
+	def __init__(self, type, default, required=False, mustIn=None):
 		self.type = type
 		self.default = default
 		self.required = required
+		self.mustIn = mustIn
 
 class ProgramParse:
+	'''
+	Parse Yaml configuration
+	'''
 	PARSER={
 		'cmd': ProgramProperty(str, None, True),
 		'numprocs': ProgramProperty(int, 1, False),
-		'stopsignal': ProgramProperty(str, 'TERM', False),
+		'stopsignal': ProgramProperty(str, 'TERM', False, signals.keys()),
 		'env': ProgramProperty(dict, {}, False),
 		'workingdir': ProgramProperty(str, None, False),
 		'autostart': ProgramProperty(bool, True, False),
 		'umask': ProgramProperty(int, -1, False),
 		'stoptime': ProgramProperty(int, 1, False),
-		# 'exitcodes': ProgramProperty(int, [0], False),
+		'exitcodes': ProgramProperty(list, [0], False),
+		'startretries': ProgramProperty(int, 0, False),
+		'starttime': ProgramProperty(int, -1, False),
+		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
+		'stdout': ProgramProperty(str, 'discard', False),
+		'stderr': ProgramProperty(str, 'discard', False),
 	}
 
 	def parseUni(self, program: dict, prop_name):
@@ -34,6 +44,12 @@ class ProgramParse:
 				return
 		if prop.type is not type(program[prop_name]):
 			raise Exception(f'{prop_name}: found {type(program[prop_name])}, {prop.type} expected')
+		if prop.type is list:
+			for i in program[prop_name]:
+				if type(i) is not int:
+					raise Exception(f'{prop_name}: found {type(i)}, int expected')
+		if prop.mustIn is not None and program[prop_name] not in prop.mustIn:
+			raise Exception(f'\'{prop_name}\': {program[prop_name]} not in {prop.mustIn}')
 		self.__setattr__(prop_name, program[prop_name])
 
 	def parse(self, program: dict):
@@ -43,37 +59,84 @@ class ProgramParse:
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name)
 
+
+def getFd(arg: str):
+	if arg == 'discard':
+		arg = '/dev/null'
+	return open(arg, 'w+')
+	
 class Process(subprocess.Popen):
-	def __init__(self, cmd, env, workingdir, umask, name):
-		null = open('/dev/null', 'r')
-		super().__init__(shlex.split(cmd),
-			env=env,
-			cwd=workingdir,
-			umask=umask,
-			stdin=null, stdout=null, stderr=null
+	'''
+	Manage Process	
+	'''
+	def __init__(self, name, options):
+		self.name = name
+		self.options = options
+		self.start = False
+		self.retry = self.options.startretries
+		self.gracefulStop = False
+
+	def myStart(self):
+		if self.start and self.poll() is None:
+			log.Warning(f'{self.name}: Trying to start a process that already running')
+			return f'{self.name}: Trying to start a process that already running\n'
+		self.start = True
+		self.gracefulStop = False
+		super().__init__(shlex.split(self.options.cmd),
+			env=self.options.env,
+			cwd=self.options.workingdir,
+			umask=self.options.umask,
+			stdin=getFd('discard'),
+			stdout=getFd(self.options.stdout),
+			stderr=getFd(self.options.stderr),
 		)
 		self.start_time = datetime.datetime.now()
-		self.name = name
+		thr = threading.Thread(target=self.myWait, args=(self.options.exitcodes,))
+		thr.start()
+		return f'{self.name}: Started\n'
 
-	def myWait(self):
+
+	def myWait(self, exitcodes):
 		returnCode = self.wait()
-		print(returnCode)
-		# if returnCode in self.exitcodes:
-		# 	pass # Success
-		# else:
-		# 	pass # Fail
+		diffTime = datetime.datetime.now() - self.start_time
+		if returnCode in exitcodes and self.options.starttime < diffTime.total_seconds():
+			log.Info(f'{self.name}: End successfuly with code {returnCode}')
+			if self.options.autorestart != 'always':
+				return
+		else:
+			if returnCode not in exitcodes:
+				log.Error(f'{self.name}: End badly with code {returnCode}')
+			else:
+				log.Error(f'{self.name}: End badly, fail at {diffTime}')
+			if self.options.autorestart not in ['always', 'unexpected']:
+				return
+		if not self.gracefulStop and self.retry > 0:
+			log.Info(f'Restart process ({self.name})')
+			self.myStart()
+			self.retry -= 1
 
 	def myStop(self, stopsignal, stoptime):
+		if not self.start:
+			log.Warning(f'{self.name}: Trying to stop a process wich not been start')
+			return f'{self.name}: Trying to stop a process wich not been start\n'
+		if type(self.poll()) is int:
+			return f'{self.name}: Not running\n'
+		log.Info(f'{self.name}: Graceful Stop')
 		self.send_signal(stopsignal)
 		try:
 			self.wait(stoptime)
 		except subprocess.TimeoutExpired:
 			self.kill()
-			print('Force kill')
+			log.Warning(f'{self.name}: Hard kill. Graceful stop timeout')
+			return f'{self.name}: Hard kill. Graceful stop timeout\n'
+		return f'{self.name}: Stopped\n'
+
 	def get_state(self):
 		return "RUNNING"
 
 	def status(self):
+		if not self.start:
+			return f'{self.name} not start\n'			
 		uptime = datetime.datetime.now() - self.start_time
 		hours = uptime.total_seconds() // 3600
 		minutes = (uptime.total_seconds() % 3600) // 60
@@ -81,6 +144,9 @@ class Process(subprocess.Popen):
 		return f"{self.name:15}{self.get_state():8} pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
 
 class Program(ProgramParse):
+	'''
+	Manage list of process
+	'''
 	def __init__(self, program: dict, name: str) -> None:
 		self.parse(program)
 		self.process = []
@@ -88,33 +154,34 @@ class Program(ProgramParse):
 		self.launch()
 
 	def launch(self):
-		if self.autostart:
-			self.start()
-
-	def start(self):
 		for index in range(self.numprocs):
 			name = self.name
 			if index:
 				name += f"_{index}"
-			process = Process(self.cmd,
-				env=self.env,
-				workingdir=self.workingdir,
-				umask=self.umask,
-				name=name
+			process = Process(
+				name=name,
+				options=self,
 			)
-			# print(process.pid)
-			thr = threading.Thread(target=process.myWait)
-			thr.start()
 			self.process.append(process)
-	
-	def stop(self):
+		if self.autostart:
+			self.start()
+
+	def start(self):
+		ret = ''
 		for process in self.process:
-			process.myStop(signals[self.stopsignal], self.stoptime)
-		self.process = []
+			ret += process.myStart()
+		return ret
+
+	def stop(self):
+		ret = ''
+		for process in self.process:
+			ret += process.myStop(signals[self.stopsignal], self.stoptime)
+		return ret
 
 	def restart(self):
-		self.stop()
-		self.start()
+		ret = self.stop()
+		ret += self.start()
+		return ret
 	
 	def status(self):
 		status = f"{self.name}: \n"
