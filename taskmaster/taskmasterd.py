@@ -2,20 +2,40 @@ import os
 import argparse
 import yaml
 import re
+import sys
+import signal
 
 from .program import Program
 from .sock	import ServerManager
+from .log	import Log
 from .controller import Controller
 
 PID_FILE = '/tmp/taskmaster.pid'
 
-def parse_config(config_file: argparse.FileType) -> dict:
-	with open(config_file.name) as stream:
+def parse_config() -> dict:
+	with open(config_file_name) as stream:
 		try:
 			config = yaml.safe_load(stream)
 			return config
 		except yaml.YAMLError as exc:
-			print(exc)
+			Log.Error(f'Error while loading config file')
+
+
+def reload_config(signum, frame):
+	Log.Info('Reloading config file')
+	config = parse_config()
+	if 'programs' in config.keys():
+		if not config['programs']:
+			Log.Warning('No program found, exiting...')
+			return 1
+		for program in config['programs']:
+			if not config['programs'][program]:
+				Log.Error(f'Error in configuration file, program {program} should not be empty')
+				return 1
+			if program not in program_list:
+				program_list[program] = Program(config['programs'][program], program)
+			else:
+				program_list[program].reload(config['programs'][program])
 
 def daemonize():
 	r, w = os.pipe()
@@ -46,26 +66,31 @@ def daemonize():
 	return
 
 def main():
+	global program_list
 	program_list = dict()
 
 	parser = argparse.ArgumentParser(description='Taskmaster daemon')
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
 	args = parser.parse_args()
-	config = parse_config(args.config)
-	daemonize()
+	global config_file_name
+	config_file_name = '/'.join([os.getcwd(), args.config.name])
+	config = parse_config()
 	if not config:
+		Log.Warning('Config file empty, exiting...')
 		return 1
+
+	daemonize()
 	if 'programs' in config.keys():
 		if not config['programs']:
+			Log.Warning('No program found, exiting...')
 			return 1
 		for program in config['programs']:
 			if not config['programs'][program]:
-				print('Program', program, 'should not be empty')
+				Log.Error(f'Error in configuration file, program {program} should not be empty')
 				return 1
 			program_list[program] = Program(config['programs'][program], program)
-	for prog in program_list:
-		print(prog)
-		# program_list[prog].stop()
+	signal.signal(signal.SIGHUP, reload_config)
+
 	server = ServerManager()
 	controller = Controller(program_list)
 	while True:
