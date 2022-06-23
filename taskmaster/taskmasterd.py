@@ -34,9 +34,9 @@ def daemonize():
 			exit()
 		else:
 			null = open('/dev/null', 'r+')
-			os.dup2(sys.stdin.fileno(), null.fileno())
-			os.dup2(sys.stdout.fileno(), null.fileno())
-			os.dup2(sys.stderr.fileno(), null.fileno())
+			# os.dup2(null.fileno(), sys.stdin.fileno())
+			# os.dup2(null.fileno(), sys.stdout.fileno())
+			# os.dup2(null.fileno(), sys.stderr.fileno())
 			os.umask(0)
 			os.chdir('/')
 			with open(PID_FILE, 'w+') as stream:
@@ -62,7 +62,7 @@ def main():
 			if not config['programs'][program]:
 				print('Program', program, 'should not be empty')
 				return 1
-			program_list[program] = Program(config['programs'][program])
+			program_list[program] = Program(config['programs'][program], program)
 	for prog in program_list:
 		print(prog)
 		# program_list[prog].stop()

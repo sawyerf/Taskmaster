@@ -1,10 +1,7 @@
-# from email.policy import default
 import subprocess
 import shlex
-import os
 import datetime
 import threading
-import time
 
 from .signal import signals
 
@@ -47,7 +44,7 @@ class ProgramParse:
 			self.parseUni(program, prop_name)
 
 class Process(subprocess.Popen):
-	def __init__(self, cmd, env, workingdir, umask):
+	def __init__(self, cmd, env, workingdir, umask, name):
 		null = open('/dev/null', 'r')
 		super().__init__(shlex.split(cmd),
 			env=env,
@@ -55,6 +52,8 @@ class Process(subprocess.Popen):
 			umask=umask,
 			stdin=null, stdout=null, stderr=null
 		)
+		self.start_time = datetime.datetime.now()
+		self.name = name
 
 	def myWait(self):
 		returnCode = self.wait()
@@ -71,11 +70,21 @@ class Process(subprocess.Popen):
 		except subprocess.TimeoutExpired:
 			self.kill()
 			print('Force kill')
+	def get_state(self):
+		return "RUNNING"
+
+	def status(self):
+		uptime = datetime.datetime.now() - self.start_time
+		hours = uptime.total_seconds() // 3600
+		minutes = (uptime.total_seconds() % 3600) // 60
+		seconds = int(uptime.total_seconds() % 60)
+		return f"{self.name:15}{self.get_state():8} pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
 
 class Program(ProgramParse):
-	def __init__(self, program: dict) -> None:
+	def __init__(self, program: dict, name: str) -> None:
 		self.parse(program)
 		self.process = []
+		self.name = name
 		self.launch()
 
 	def launch(self):
@@ -84,10 +93,14 @@ class Program(ProgramParse):
 
 	def start(self):
 		for index in range(self.numprocs):
+			name = self.name
+			if index:
+				name += f"_{index}"
 			process = Process(self.cmd,
 				env=self.env,
 				workingdir=self.workingdir,
 				umask=self.umask,
+				name=name
 			)
 			# print(process.pid)
 			thr = threading.Thread(target=process.myWait)
@@ -104,4 +117,7 @@ class Program(ProgramParse):
 		self.start()
 	
 	def status(self):
-		pass
+		status = f"{self.name}: \n"
+		for process in self.process:
+			status += process.status()
+		return status
