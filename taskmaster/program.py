@@ -4,7 +4,7 @@ import datetime
 import threading
 
 from .signal import signals
-from .log import log
+from .log	import Log
 
 class ProgramProperty:
 	def __init__(self, type, default, required=False, mustIn=None):
@@ -34,13 +34,14 @@ class ProgramParse:
 		'stderr': ProgramProperty(str, 'discard', False),
 	}
 
-	def parseUni(self, program: dict, prop_name):
+	def parseUni(self, program: dict, prop_name, set_props):
 		prop = self.PARSER.get(prop_name)
 		if prop_name not in program.keys():
 			if prop.required:
 				raise Exception(f'{prop_name} is required and missing')
 			else:
-				self.__setattr__(prop_name, prop.default)
+				if set_props:
+					self.__setattr__(prop_name, prop.default)
 				return
 		if prop.type is not type(program[prop_name]):
 			raise Exception(f'{prop_name}: found {type(program[prop_name])}, {prop.type} expected')
@@ -50,14 +51,15 @@ class ProgramParse:
 					raise Exception(f'{prop_name}: found {type(i)}, int expected')
 		if prop.mustIn is not None and program[prop_name] not in prop.mustIn:
 			raise Exception(f'\'{prop_name}\': {program[prop_name]} not in {prop.mustIn}')
-		self.__setattr__(prop_name, program[prop_name])
+		if set_props:
+			self.__setattr__(prop_name, program[prop_name])
 
-	def parse(self, program: dict):
+	def parse(self, program: dict, set_props=True):
 		for property in program.keys():
 			if property not in self.PARSER.keys():
 				raise Exception(f'{property} : unknown property')
 		for prop_name in self.PARSER:
-			self.parseUni(program, prop_name)
+			self.parseUni(program, prop_name, set_props)
 
 
 def getFd(arg: str):
@@ -151,6 +153,7 @@ class Program(ProgramParse):
 		self.parse(program)
 		self.process = []
 		self.name = name
+		self.config = program
 		self.launch()
 
 	def launch(self):
@@ -188,3 +191,15 @@ class Program(ProgramParse):
 		for process in self.process:
 			status += process.status()
 		return status
+
+	def reload(self, program: dict):
+		try:
+			self.parse(program, False)
+		except:
+			Log.Error(f'Error while reloading program {self.name}')
+		if self.config != program:
+			self.stop()
+			self.parse(program)
+			self.config = program
+			self.process = []
+			self.start()
