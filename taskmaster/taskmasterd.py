@@ -1,7 +1,7 @@
 import os
-import sys
 import argparse
 import yaml
+import re
 
 from .program import Program
 from .sock	import ServerManager
@@ -74,8 +74,12 @@ def main():
 			cmd = server.getCommand()
 			if not cmd:
 				break
-			command = cmd.split(' ')[0]
-			arg = cmd.split(' ')[1]
+			reCmd = re.match(r'(?P<cmd>[a-z]*)(?: {1,})(?P<arg>[a-zA-Z0-9_]{1,})', cmd)
+			if not reCmd:
+				server.respond(b'\x00\x00\x00\x00\x00')
+				break	
+			command = reCmd.group('cmd')
+			arg = reCmd.group('arg')
 			response = getattr(controller, command)(arg)
 			server.respond(response.encode())
 			server.respond(b'\x00\x00\x00\x00\x00')

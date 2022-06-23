@@ -24,7 +24,8 @@ class Controller:
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
-            response = self.program_list[arg].start()
+            self.program_list[arg].start()
+            response = f"{arg} started"
         return response
     
     def stop(self, arg: str) -> str:
@@ -36,6 +37,19 @@ class Controller:
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
-            response = self.program_list[arg].stop()
+            self.program_list[arg].stop()
+            response = f"{arg} stopped"
         return response
-        
+
+    def restart(self, arg: str) -> str:
+        response = ""
+        if arg == "all":
+            for program in self.program_list:
+                self.program_list[program].restart()
+                response += f"{program} restarted"
+        elif arg not in self.program_list.keys():
+            response = "Invalid program name.\n"
+        else:
+            self.program_list[arg].restart()
+            response = f"{arg} restarted"
+        return response
