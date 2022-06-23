@@ -30,6 +30,8 @@ class ProgramParse:
 		'startretries': ProgramProperty(int, 0, False),
 		'starttime': ProgramProperty(int, -1, False),
 		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
+		'stdout': ProgramProperty(str, 'discard', False),
+		'stderr': ProgramProperty(str, 'discard', False),
 	}
 
 	def parseUni(self, program: dict, prop_name):
@@ -57,6 +59,12 @@ class ProgramParse:
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name)
 
+
+def getFd(arg: str):
+	if arg == 'discard':
+		arg = '/dev/null'
+	return open(arg, 'w+')
+	
 class Process(subprocess.Popen):
 	'''
 	Manage Process	
@@ -72,14 +80,15 @@ class Process(subprocess.Popen):
 		if self.start and self.poll() is None:
 			log.Warning(f'{self.name}: Trying to start a process that already running')
 			return f'{self.name}: Trying to start a process that already running\n'
-		null = open('/dev/null', 'r')
 		self.start = True
 		self.gracefulStop = False
 		super().__init__(shlex.split(self.options.cmd),
 			env=self.options.env,
 			cwd=self.options.workingdir,
 			umask=self.options.umask,
-			stdin=null, stdout=null, stderr=null
+			stdin=getFd('discard'),
+			stdout=getFd(self.options.stdout),
+			stderr=getFd(self.options.stderr),
 		)
 		self.start_time = datetime.datetime.now()
 		thr = threading.Thread(target=self.myWait, args=(self.options.exitcodes,))
