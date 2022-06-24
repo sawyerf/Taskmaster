@@ -80,7 +80,7 @@ class Process(subprocess.Popen):
 
 	def myStart(self):
 		if self.start and self.poll() is None:
-			log.Warning(f'{self.name}: Trying to start a process that already running')
+			Log.Warning(f'{self.name}: Trying to start a process that already running')
 			return f'{self.name}: Trying to start a process that already running\n'
 		self.start = True
 		self.gracefulStop = False
@@ -102,34 +102,34 @@ class Process(subprocess.Popen):
 		returnCode = self.wait()
 		diffTime = datetime.datetime.now() - self.start_time
 		if returnCode in exitcodes and self.options.starttime < diffTime.total_seconds():
-			log.Info(f'{self.name}: End successfuly with code {returnCode}')
+			Log.Info(f'{self.name}: End successfuly with code {returnCode}')
 			if self.options.autorestart != 'always':
 				return
 		else:
 			if returnCode not in exitcodes:
-				log.Error(f'{self.name}: End badly with code {returnCode}')
+				Log.Error(f'{self.name}: End badly with code {returnCode}')
 			else:
-				log.Error(f'{self.name}: End badly, fail at {diffTime}')
+				Log.Error(f'{self.name}: End badly, fail at {diffTime}')
 			if self.options.autorestart not in ['always', 'unexpected']:
 				return
 		if not self.gracefulStop and self.retry > 0:
-			log.Info(f'Restart process ({self.name})')
+			Log.Info(f'Restart process ({self.name})')
 			self.myStart()
 			self.retry -= 1
 
 	def myStop(self, stopsignal, stoptime):
 		if not self.start:
-			log.Warning(f'{self.name}: Trying to stop a process wich not been start')
+			Log.Warning(f'{self.name}: Trying to stop a process wich not been start')
 			return f'{self.name}: Trying to stop a process wich not been start\n'
 		if type(self.poll()) is int:
 			return f'{self.name}: Not running\n'
-		log.Info(f'{self.name}: Graceful Stop')
+		Log.Info(f'{self.name}: Graceful Stop')
 		self.send_signal(stopsignal)
 		try:
 			self.wait(stoptime)
 		except subprocess.TimeoutExpired:
 			self.kill()
-			log.Warning(f'{self.name}: Hard kill. Graceful stop timeout')
+			Log.Warning(f'{self.name}: Hard kill. Graceful stop timeout')
 			return f'{self.name}: Hard kill. Graceful stop timeout\n'
 		return f'{self.name}: Stopped\n'
 

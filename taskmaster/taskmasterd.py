@@ -9,7 +9,7 @@ from .program import Program
 from .sock	import ServerManager
 from .log	import Log
 from .controller import Controller
-from .log import log
+from .log import Log
 
 
 PID_FILE = '/tmp/taskmaster.pid'
@@ -67,11 +67,19 @@ def daemonize():
 			w.close()
 	return
 
+def parseCommand(cmd):
+	reCmd = re.match(r'(?P<cmd>[a-z]*)(?: {1,})(?P<arg>[a-zA-Z0-9_]{1,})', cmd)
+	if not reCmd:
+		return None
+	if reCmd.group('cmd') not in ['stop', 'start', 'status', 'reload', 'restart']:
+		return None
+	return reCmd
+
 def main():
 	global program_list
 	program_list = dict()
 
-	log.Info(f'Start {sys.argv}')
+	Log.Info(f'Start {sys.argv}')
 	parser = argparse.ArgumentParser(description='Taskmaster daemon')
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
 	args = parser.parse_args()
@@ -102,12 +110,11 @@ def main():
 			cmd = server.getCommand()
 			if not cmd:
 				break
-			reCmd = re.match(r'(?P<cmd>[a-z]*)(?: {1,})(?P<arg>[a-zA-Z0-9_]{1,})', cmd)
+			reCmd = parseCommand(cmd)
 			if not reCmd:
-				server.respond(b'\x00\x00\x00\x00\x00')
-				break	
+				server.respond(b'')
+				continue
 			command = reCmd.group('cmd')
 			arg = reCmd.group('arg')
 			response = getattr(controller, command)(arg)
 			server.respond(response.encode())
-			server.respond(b'\x00\x00\x00\x00\x00')
