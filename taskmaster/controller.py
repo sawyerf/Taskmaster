@@ -30,15 +30,15 @@ class Controller:
     
     def stop(self, arg: str) -> str:
         response = ""
-        if arg == "all":
+        if arg in ["all", "main"]:
             for program in self.program_list:
                 self.program_list[program].stop()
-                response += f"{program} stopped"
+                response += f"{program} stopped\n"
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
             self.program_list[arg].stop()
-            response = f"{arg} stopped"
+            response = f"{arg} stopped\n"
         return response
 
     def restart(self, arg: str) -> str:

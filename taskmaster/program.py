@@ -60,8 +60,7 @@ class ProgramParse:
 				raise Exception(f'{property} : unknown property')
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name, set_props)
-
-
+ 
 def getFd(arg: str):
 	if arg == 'discard':
 		arg = '/dev/null'
@@ -124,6 +123,7 @@ class Process(subprocess.Popen):
 		if type(self.poll()) is int:
 			return f'{self.name}: Not running\n'
 		Log.Info(f'{self.name}: Graceful Stop')
+		self.gracefulStop = True
 		self.send_signal(stopsignal)
 		try:
 			self.wait(stoptime)
@@ -150,6 +150,8 @@ class Program(ProgramParse):
 	Manage list of process
 	'''
 	def __init__(self, program: dict, name: str) -> None:
+		if name == 'main':
+			raise Exception(f'Name of the process `main\' not valid')
 		self.parse(program)
 		self.process = []
 		self.name = name
@@ -202,4 +204,4 @@ class Program(ProgramParse):
 			self.parse(program)
 			self.config = program
 			self.process = []
-			self.start()
+			self.launch()

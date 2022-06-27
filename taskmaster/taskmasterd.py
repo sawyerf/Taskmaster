@@ -118,3 +118,6 @@ def main():
 			arg = reCmd.group('arg')
 			response = getattr(controller, command)(arg)
 			server.respond(response.encode())
+			if (command == 'stop' and arg == 'main'):
+				Log.Info('Stop main program.')
+				exit(0)
