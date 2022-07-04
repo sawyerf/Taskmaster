@@ -10,9 +10,8 @@ from .sock	import ServerManager
 from .log	import Log
 from .controller import Controller
 from .log import Log
-
-
-PID_FILE = '/tmp/taskmaster.pid'
+from .files import PID_FILE
+from .files import LOCK_FILE
 
 def parse_config() -> dict:
 	with open(config_file_name) as stream:
@@ -22,7 +21,6 @@ def parse_config() -> dict:
 		except yaml.YAMLError as exc:
 			Log.Error(f'Error while loading config file')
 
-
 def reload_config(signum, frame):
 	Log.Info('Reloading config file')
 	config = parse_config()
@@ -31,6 +29,8 @@ def reload_config(signum, frame):
 			Log.Warning('No program found, exiting...')
 			return 1
 		for program in config['programs']:
+			if program == "taskmasterd":
+				Log.Error("Invalid program name : taskmasterd")
 			if not config['programs'][program]:
 				Log.Error(f'Error in configuration file, program {program} should not be empty')
 				return 1
@@ -38,6 +38,16 @@ def reload_config(signum, frame):
 				program_list[program] = Program(config['programs'][program], program)
 			else:
 				program_list[program].reload(config['programs'][program])
+
+def already_running():
+	try:
+		with open(PID_FILE) as f:
+			pid = int(next(f))
+		os.kill(pid, 0)
+		return True
+	except:
+		return False
+
 
 def daemonize():
 	r, w = os.pipe()
@@ -79,6 +89,8 @@ def main():
 	global program_list
 	program_list = dict()
 
+	if already_running():
+		exit(1)
 	Log.Info(f'Start {sys.argv}')
 	parser = argparse.ArgumentParser(description='Taskmaster daemon')
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
@@ -96,6 +108,8 @@ def main():
 			Log.Warning('No program found, exiting...')
 			return 1
 		for program in config['programs']:
+			if program == "taskmasterd":
+				Log.Error("Invalid program name : taskmasterd")
 			if not config['programs'][program]:
 				Log.Error(f'Error in configuration file, program {program} should not be empty')
 				return 1
