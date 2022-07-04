@@ -124,6 +124,7 @@ class Process(subprocess.Popen):
 			return f'{self.name}: Not running\n'
 		Log.Info(f'{self.name}: Graceful Stop')
 		self.gracefulStop = True
+		self.stopTime = datetime.datetime.now()
 		self.send_signal(stopsignal)
 		try:
 			self.wait(stoptime)
@@ -133,17 +134,16 @@ class Process(subprocess.Popen):
 			return f'{self.name}: Hard kill. Graceful stop timeout\n'
 		return f'{self.name}: Stopped\n'
 
-	def get_state(self):
-		return "RUNNING"
-
 	def status(self):
+		if self.gracefulStop:
+			return f"{self.name:15} STOPPED {self.stopTime.strftime('%B %d %I:%M %p')}\n"
 		if not self.start:
-			return f'{self.name} not start\n'			
+			return f'{self.name} not started\n'			
 		uptime = datetime.datetime.now() - self.start_time
 		hours = uptime.total_seconds() // 3600
 		minutes = (uptime.total_seconds() % 3600) // 60
 		seconds = int(uptime.total_seconds() % 60)
-		return f"{self.name:15}{self.get_state():8} pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
+		return f"{self.name:15} RUNNING pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
 
 class Program(ProgramParse):
 	'''
@@ -175,17 +175,20 @@ class Program(ProgramParse):
 		ret = ''
 		for process in self.process:
 			ret += process.myStart()
+		Log.Info(ret)
 		return ret
 
 	def stop(self):
 		ret = ''
 		for process in self.process:
 			ret += process.myStop(signals[self.stopsignal], self.stoptime)
+		Log.Info(ret)
 		return ret
 
 	def restart(self):
 		ret = self.stop()
 		ret += self.start()
+		Log.Info(ret)
 		return ret
 	
 	def status(self):
