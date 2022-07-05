@@ -3,7 +3,7 @@ import shlex
 import datetime
 import threading
 
-from .signal import signals
+from .var import SIGNALS
 from .log	import Log
 
 class ProgramProperty:
@@ -20,7 +20,7 @@ class ProgramParse:
 	PARSER={
 		'cmd': ProgramProperty(str, None, True),
 		'numprocs': ProgramProperty(int, 1, False),
-		'stopsignal': ProgramProperty(str, 'TERM', False, signals.keys()),
+		'stopsignal': ProgramProperty(str, 'TERM', False, SIGNALS.keys()),
 		'env': ProgramProperty(dict, {}, False),
 		'workingdir': ProgramProperty(str, None, False),
 		'autostart': ProgramProperty(bool, True, False),
@@ -150,8 +150,8 @@ class Program(ProgramParse):
 	Manage list of process
 	'''
 	def __init__(self, program: dict, name: str) -> None:
-		if name == 'main':
-			raise Exception(f'Name of the process `main\' not valid')
+		if name in ['main', 'taskmasterd']:
+			raise Exception(f'Name of the process `{name}\' not valid')
 		self.parse(program)
 		self.process = []
 		self.name = name
@@ -181,7 +181,7 @@ class Program(ProgramParse):
 	def stop(self):
 		ret = ''
 		for process in self.process:
-			ret += process.myStop(signals[self.stopsignal], self.stoptime)
+			ret += process.myStop(SIGNALS[self.stopsignal], self.stoptime)
 		Log.Info(ret)
 		return ret
 

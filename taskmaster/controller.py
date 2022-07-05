@@ -2,7 +2,7 @@ import os
 import signal
 
 from .program import Program
-from .files import PID_FILE
+from .var import PID_FILE
 
 class Controller:
     def __init__(self, program_list: dict):
@@ -72,7 +72,7 @@ class Controller:
             response = "Config file reloaded.\n"
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
-        else:
-            self.program_list[arg].reload()
-            response = f"{arg} reloaded\n"
+        # else:
+        #     self.program_list[arg].reload()
+        #     response = f"{arg} reloaded\n"
         return response
