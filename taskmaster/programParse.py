@@ -27,6 +27,7 @@ class ProgramParse:
 		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
 		'stdout': ProgramProperty(str, 'discard', False),
 		'stderr': ProgramProperty(str, 'discard', False),
+		'run_as': ProgramProperty(str, 'root', False, [user.pw_name for user in pwd.getpwall()]),
 	}
 
 	def parseUni(self, program: dict, prop_name, set_props):
