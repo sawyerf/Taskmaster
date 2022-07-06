@@ -12,6 +12,7 @@ from .controller import Controller
 from .log import Log
 from .var import PID_FILE, LOCK_FILE, Global
 from .signal import setSignal, parse_config
+from .programParse import parseConfig
 
 def already_running():
 	try:
@@ -59,36 +60,7 @@ def parseCommand(cmd):
 		return None
 	return reCmd
 
-def main():
-	if already_running():
-		exit(1)
-	Log.Info(f'Start {sys.argv}')
-	parser = argparse.ArgumentParser(description='Taskmaster daemon')
-	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
-	args = parser.parse_args()
-
-	Global.CONFIG_FILE = '/'.join([os.getcwd(), args.config.name])
-	config = parse_config()
-
-	if not config:
-		Log.Warning('Config file empty, exiting...')
-		return 1
-
-	daemonize()
-	if 'programs' in config.keys():
-		if not config['programs']:
-			Log.Warning('No program found, exiting...')
-			return 1
-		for program in config['programs']:
-			if program == "taskmasterd":
-				Log.Error("Invalid program name : taskmasterd")
-			if not config['programs'][program]:
-				Log.Error(f'Error in configuration file, program {program} should not be empty')
-				return 1
-			Global.program_list[program] = Program(config['programs'][program], program)
-
-	setSignal()
-
+def startServer():
 	server = ServerManager()
 	controller = Controller(Global.program_list)
 	while True:
@@ -108,3 +80,27 @@ def main():
 			if (command == 'stop' and arg == 'main'):
 				Log.Info('Stop main program.')
 				exit(0)
+
+def runPrograms(listOptions):
+	for options in listOptions:
+		Global.program_list[options.name] = Program(options)
+
+def main():
+	if already_running():
+		exit(1)
+	Log.Info(f'Start {sys.argv}')
+	parser = argparse.ArgumentParser(description='Taskmaster daemon')
+	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
+	args = parser.parse_args()
+
+	Global.CONFIG_FILE = '/'.join([os.getcwd(), args.config.name])
+	config = parse_config()
+	if not config:
+		Log.Warning('Config file empty, exiting...')
+		return 1
+	listOptions = parseConfig(config)
+
+	daemonize()
+	setSignal()
+	runPrograms(listOptions)
+	startServer()

@@ -29,14 +29,19 @@ class ProgramParse:
 		'stderr': ProgramProperty(str, 'discard', False),
 	}
 
-	def parseUni(self, program: dict, prop_name, set_props):
+	def __init__(self, name, program: dict):
+		if name in ['main', 'taskmasterd']:
+			raise Exception(f'Name of the process `{name}\' not valid')
+		self.name = name
+		self.parse(program)
+
+	def parseUni(self, program: dict, prop_name):
 		prop = self.PARSER.get(prop_name)
 		if prop_name not in program.keys():
 			if prop.required:
 				raise Exception(f'{prop_name} is required and missing')
 			else:
-				if set_props:
-					self.__setattr__(prop_name, prop.default)
+				self.__setattr__(prop_name, prop.default)
 				return
 		if prop.type is not type(program[prop_name]):
 			raise Exception(f'{prop_name}: found {type(program[prop_name])}, {prop.type} expected')
@@ -46,12 +51,26 @@ class ProgramParse:
 					raise Exception(f'{prop_name}: found {type(i)}, int expected')
 		if prop.mustIn is not None and program[prop_name] not in prop.mustIn:
 			raise Exception(f'\'{prop_name}\': {program[prop_name]} not in {prop.mustIn}')
-		if set_props:
-			self.__setattr__(prop_name, program[prop_name])
+		self.__setattr__(prop_name, program[prop_name])
 
-	def parse(self, program: dict, set_props=True):
+	def parse(self, program: dict):
 		for property in program.keys():
 			if property not in self.PARSER.keys():
 				raise Exception(f'{property} : unknown property')
 		for prop_name in self.PARSER:
-			self.parseUni(program, prop_name, set_props)
+			self.parseUni(program, prop_name)
+
+def parseConfig(config):
+	listOptions = []
+	if 'programs' in config.keys():
+		if not config['programs']:
+			Log.Warning('No program found, exiting...')
+			return 1
+		for program in config['programs']:
+			if program == "taskmasterd":
+				Log.Error("Invalid program name : taskmasterd")
+			if not config['programs'][program]:
+				Log.Error(f'Error in configuration file, program {program} should not be empty')
+				return 1
+			listOptions.append(ProgramParse(program, config['programs'][program]))
+	return listOptions
