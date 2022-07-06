@@ -76,6 +76,7 @@ class Process(subprocess.Popen):
 		self.start = False
 		self.retry = self.options.startretries
 		self.gracefulStop = False
+		self.status = ''
 
 	def myStart(self):
 		if self.start and self.poll() is None:
@@ -83,6 +84,7 @@ class Process(subprocess.Popen):
 			return f'{self.name}: Trying to start a process that already running\n'
 		self.start = True
 		self.gracefulStop = False
+		self.status = 'STARTED'
 		super().__init__(shlex.split(self.options.cmd),
 			env=self.options.env,
 			cwd=self.options.workingdir,
@@ -100,6 +102,12 @@ class Process(subprocess.Popen):
 	def myWait(self, exitcodes):
 		returnCode = self.wait()
 		diffTime = datetime.datetime.now() - self.start_time
+		self.run = False
+		self.stopTime = datetime.datetime.now()
+		if self.gracefulStop:
+			self.status = 'STOPPED'
+		else:
+			self.status = 'FINISHED'
 		if returnCode in exitcodes and self.options.starttime < diffTime.total_seconds():
 			Log.Info(f'{self.name}: End successfuly with code {returnCode}')
 			if self.options.autorestart != 'always':
@@ -124,7 +132,6 @@ class Process(subprocess.Popen):
 			return f'{self.name}: Not running\n'
 		Log.Info(f'{self.name}: Graceful Stop')
 		self.gracefulStop = True
-		self.stopTime = datetime.datetime.now()
 		self.send_signal(stopsignal)
 		try:
 			self.wait(stoptime)
@@ -134,9 +141,11 @@ class Process(subprocess.Popen):
 			return f'{self.name}: Hard kill. Graceful stop timeout\n'
 		return f'{self.name}: Stopped\n'
 
-	def status(self):
+	def myStatus(self):
 		if self.gracefulStop:
 			return f"{self.name:15} STOPPED {self.stopTime.strftime('%B %d %I:%M %p')}\n"
+		if self.status == 'FINISHED':
+			return f"{self.name:15} FINISHED {self.stopTime.strftime('%B %d %I:%M %p')}\n"
 		if not self.start:
 			return f'{self.name} not started\n'			
 		uptime = datetime.datetime.now() - self.start_time
@@ -194,7 +203,7 @@ class Program(ProgramParse):
 	def status(self):
 		status = f"{self.name}: \n"
 		for process in self.process:
-			status += process.status()
+			status += process.myStatus()
 		return status
 
 	def reload(self, program: dict):

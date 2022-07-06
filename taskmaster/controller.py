@@ -55,12 +55,12 @@ class Controller:
         if arg == "all":
             for program in self.program_list:
                 self.program_list[program].restart()
-                response += f"{program} restarted"
+                response += f"{program} restarted\n"
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
             self.program_list[arg].restart()
-            response = f"{arg} restarted"
+            response = f"{arg} restarted\n"
         return response
 
     def reload(self, arg: str):

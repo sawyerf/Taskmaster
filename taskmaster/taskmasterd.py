@@ -18,6 +18,7 @@ def already_running():
 		with open(PID_FILE) as f:
 			pid = int(next(f))
 		os.kill(pid, 0)
+		Log.Warning('A taskmater deamon is already running')
 		return True
 	except:
 		return False

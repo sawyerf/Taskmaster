@@ -41,7 +41,6 @@ SIGNALS = {
 	'XFSZ':   signal.SIGXFSZ
 }
 
-
 class Global:
 	CONFIG_FILE = ''
 	program_list = dict()
