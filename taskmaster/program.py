@@ -7,7 +7,6 @@ import os
 
 from .var import SIGNALS
 from .log	import Log
-from .programParse import ProgramParse
 
 def getFd(arg: str):
 	if arg == 'discard':
@@ -110,30 +109,26 @@ class Process(subprocess.Popen):
 		seconds = int(uptime.total_seconds() % 60)
 		return f"{self.name:15} RUNNING pid {self.pid:6}, uptime {hours:02}:{minutes:02}:{seconds:02}\n"
 
-class Program(ProgramParse):
+class Program():
 	'''
 	Manage list of process
 	'''
-	def __init__(self, program: dict, name: str) -> None:
-		if name in ['main', 'taskmasterd']:
-			raise Exception(f'Name of the process `{name}\' not valid')
-		self.parse(program)
+	def __init__(self, options) -> None:
+		self.options = options
 		self.process = []
-		self.name = name
-		self.config = program
 		self.launch()
 
 	def launch(self):
-		for index in range(self.numprocs):
-			name = self.name
+		for index in range(self.options.numprocs):
+			name = self.options.name
 			if index:
 				name += f"_{index}"
 			process = Process(
 				name=name,
-				options=self,
+				options=self.options,
 			)
 			self.process.append(process)
-		if self.autostart:
+		if self.options.autostart:
 			self.start()
 
 	def start(self):
@@ -147,7 +142,7 @@ class Program(ProgramParse):
 	def stop(self):
 		retctl = ''
 		for process in self.process:
-			ret = process.myStop(SIGNALS[self.stopsignal], self.stoptime)
+			ret = process.myStop(SIGNALS[self.options.stopsignal], self.options.stoptime)
 			Log.Info(ret.strip('\n'))	
 			retctl += ret
 		return retctl
@@ -159,20 +154,18 @@ class Program(ProgramParse):
 		return ret
 	
 	def status(self):
-		status = f"{self.name}: \n"
+		status = f"{self.options.name}: \n"
 		for process in self.process:
 			status += process.myStatus()
 		status += '\n'
 		return status
 
-	def reload(self, program: dict):
-		try:
-			self.parse(program, False)
-		except:
-			Log.Error(f'Error while reloading program {self.name}')
-		if self.config != program:
+	def reload(self, newOptions):
+		dictOptions = dict(vars(self.options))
+		dictNewOptions = dict(vars(newOptions))
+
+		if dictOptions != dictNewOptions:
 			self.stop()
-			self.parse(program)
-			self.config = program
+			self.options = newOptions
 			self.process = []
 			self.launch()
