@@ -9,9 +9,12 @@ def parse_config() -> dict:
 	with open(Global.CONFIG_FILE) as stream:
 		try:
 			config = yaml.safe_load(stream)
+			if not config:
+				config = {}
 			return config
 		except yaml.YAMLError as exc:
 			Log.Error(f'Error while loading config file')
+			return {}
 
 def reload_config(signum, frame):
 	Log.Info('Reloading config file')
@@ -28,6 +31,13 @@ def reload_config(signum, frame):
 				Global.program_list[program] = Program(config['programs'][program], program)
 			else:
 				Global.program_list[program].reload(config['programs'][program])
+		for program in Global.program_list:
+			if program not in config['programs']:
+				Global.program_list[program].stop()
+	else:
+		for program in Global.program_list:
+			Global.program_list[program].stop()
+
 
 def termStop(signum, frame):
 	Log.Info('Receive SIGTERM')

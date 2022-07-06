@@ -67,7 +67,7 @@ def main():
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
 	args = parser.parse_args()
 
-	Global.CONFIG_FILE = args.config.name
+	Global.CONFIG_FILE = '/'.join([os.getcwd(), args.config.name])
 	config = parse_config()
 
 	if not config:

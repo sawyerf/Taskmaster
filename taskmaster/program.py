@@ -181,18 +181,20 @@ class Program(ProgramParse):
 			self.start()
 
 	def start(self):
-		ret = ''
+		retctl = ''
 		for process in self.process:
-			ret += process.myStart()
-		Log.Info(ret)
-		return ret
+			ret = process.myStart()
+			Log.Info(ret.strip('\n'))		
+			retctl += ret
+		return retctl
 
 	def stop(self):
-		ret = ''
+		retctl = ''
 		for process in self.process:
-			ret += process.myStop(SIGNALS[self.stopsignal], self.stoptime)
-		Log.Info(ret)
-		return ret
+			ret = process.myStop(SIGNALS[self.stopsignal], self.stoptime)
+			Log.Info(ret.strip('\n'))	
+			retctl += ret
+		return retctl
 
 	def restart(self):
 		ret = self.stop()
@@ -204,6 +206,7 @@ class Program(ProgramParse):
 		status = f"{self.name}: \n"
 		for process in self.process:
 			status += process.myStatus()
+		status += '\n'
 		return status
 
 	def reload(self, program: dict):
