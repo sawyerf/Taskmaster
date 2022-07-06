@@ -20,7 +20,14 @@ def parse_config() -> dict:
 def reload_config(signum, frame):
 	Log.Info('Reloading config file')
 	config = parse_config()
-	listOptions = parseConfig(config) # TODO: gerer si ca fail
+	if not config:
+		Log.Warning('Config file empty, exiting...')
+		return
+	try:
+		listOptions = parseConfig(config)
+	except Exception as e:
+		Log.Error('Fail to parse config file: ', e)
+		return
 	for options in listOptions:
 		nameProgram = options.name
 		if nameProgram not in Global.program_list:

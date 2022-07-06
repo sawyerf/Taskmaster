@@ -41,6 +41,7 @@ def daemonize():
 			exit()
 		else:
 			null = open('/dev/null', 'r+')
+			# TODO: remettre
 			# os.dup2(null.fileno(), sys.stdin.fileno())
 			# os.dup2(null.fileno(), sys.stdout.fileno())
 			# os.dup2(null.fileno(), sys.stderr.fileno())
