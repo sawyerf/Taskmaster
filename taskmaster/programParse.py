@@ -1,3 +1,6 @@
+import pwd
+import os
+
 from .var import SIGNALS
 from .log	import Log
 
@@ -27,7 +30,7 @@ class ProgramParse:
 		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
 		'stdout': ProgramProperty(str, 'discard', False),
 		'stderr': ProgramProperty(str, 'discard', False),
-		'run_as': ProgramProperty(str, 'root', False, [user.pw_name for user in pwd.getpwall()]),
+		'run_as': ProgramProperty(str, os.getlogin(), False, [user.pw_name for user in pwd.getpwall()]),
 	}
 
 	def __init__(self, name, program: dict):
