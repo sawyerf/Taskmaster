@@ -41,6 +41,7 @@ class Process(subprocess.Popen):
 		self.start_time = datetime.datetime.now()
 		thr = threading.Thread(target=self.myWait, args=(self.options.exitcodes,))
 		thr.start()
+		Log.Info(f'Start {self.name}')
 		return f'{self.name}: Started\n'
 
 
@@ -125,7 +126,6 @@ class Program():
 		retctl = ''
 		for process in self.process:
 			ret = process.myStart()
-			Log.Info(ret.strip('\n'))		
 			retctl += ret
 		return retctl
 
@@ -133,14 +133,13 @@ class Program():
 		retctl = ''
 		for process in self.process:
 			ret = process.myStop(SIGNALS[self.options.stopsignal], self.options.stoptime)
-			Log.Info(ret.strip('\n'))	
 			retctl += ret
 		return retctl
 
 	def restart(self):
+		Log.Info(f'Restart {self.options.name}')
 		ret = self.stop()
 		ret += self.start()
-		Log.Info(ret)
 		return ret
 	
 	def status(self):

@@ -23,13 +23,11 @@ class Controller:
         response = ""
         if arg == "all":
             for program in self.program_list:
-                self.program_list[program].start()
-                response += f"{program} started"
+                response += self.program_list[program].start()
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
-            self.program_list[arg].start()
-            response = f"{arg} started"
+            response = self.program_list[arg].start()
         return response
     
     def stop(self, arg: str) -> str:
@@ -41,26 +39,22 @@ class Controller:
             response = "Taskmaster daemon stopped\n"
         elif arg in ["all", "main"]:
             for program in self.program_list:
-                self.program_list[program].stop()
-                response += f"{program} stopped\n"
+                response += self.program_list[program].stop()
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
-            self.program_list[arg].stop()
-            response = f"{arg} stopped\n"
+            response = self.program_list[arg].stop()
         return response
 
     def restart(self, arg: str) -> str:
         response = ""
         if arg == "all":
             for program in self.program_list:
-                self.program_list[program].restart()
-                response += f"{program} restarted\n"
+                response += self.program_list[program].restart()
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
         else:
-            self.program_list[arg].restart()
-            response = f"{arg} restarted\n"
+            response = self.program_list[arg].restart()
         return response
 
     def reload(self, arg: str):
@@ -72,7 +66,4 @@ class Controller:
             response = "Config file reloaded.\n"
         elif arg not in self.program_list.keys():
             response = "Invalid program name.\n"
-        # else:
-        #     self.program_list[arg].reload()
-        #     response = f"{arg} reloaded\n"
         return response

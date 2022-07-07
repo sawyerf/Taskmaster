@@ -21,7 +21,7 @@ def main():
 	if len(argv) == 1:
 		while True:
 			try:
-				cmd = input('taskmaster> ')
+				cmd = input('\33[1;31mtaskmaster> \033[00m')
 				if cmd == "exit":
 					break
 				if not parseCommand(cmd):

@@ -41,10 +41,9 @@ def daemonize():
 			exit()
 		else:
 			null = open('/dev/null', 'r+')
-			# TODO: remettre
-			# os.dup2(null.fileno(), sys.stdin.fileno())
-			# os.dup2(null.fileno(), sys.stdout.fileno())
-			# os.dup2(null.fileno(), sys.stderr.fileno())
+			os.dup2(null.fileno(), sys.stdin.fileno())
+			os.dup2(null.fileno(), sys.stdout.fileno())
+			os.dup2(null.fileno(), sys.stderr.fileno())
 			os.umask(0)
 			os.chdir('/')
 			with open(PID_FILE, 'w+') as stream:
@@ -94,12 +93,18 @@ def main():
 	parser.add_argument('-c', '--config', type=argparse.FileType('r', encoding='utf-8'), required=True, help='Defines the configuration file to read')
 	args = parser.parse_args()
 
-	Global.CONFIG_FILE = '/'.join([os.getcwd(), args.config.name])
+	Global.CONFIG_FILE = args.config.name
+	if not re.match(r'^/', args.config.name):
+		Global.CONFIG_FILE = '/'.join([os.getcwd(), args.config.name])
 	config = parse_config()
 	if not config:
 		Log.Warning('Config file empty, exiting...')
 		return 1
-	listOptions = parseConfig(config)
+	try:
+		listOptions = parseConfig(config)
+	except Exception as e:
+		Log.Error('Fail to parse: ', e)
+		exit(1)
 
 	daemonize()
 	setSignal()

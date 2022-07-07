@@ -22,7 +22,7 @@ class ProgramParse:
 		'umask': ProgramProperty(int, -1, False),
 		'stoptime': ProgramProperty(int, 1, False),
 		'exitcodes': ProgramProperty(list, [0], False),
-		'startretries': ProgramProperty(int, 0, False),
+		'startretries': ProgramProperty(int, 3, False),
 		'starttime': ProgramProperty(int, -1, False),
 		'autorestart': ProgramProperty(str, 'unexpected', False, ['always', 'never', 'unexpected']),
 		'stdout': ProgramProperty(str, 'discard', False),
@@ -59,6 +59,9 @@ class ProgramParse:
 				raise Exception(f'{property} : unknown property')
 		for prop_name in self.PARSER:
 			self.parseUni(program, prop_name)
+		for key in self.env:
+			self.env[key] = str(self.env[key])
+
 
 def parseConfig(config):
 	listOptions = []
