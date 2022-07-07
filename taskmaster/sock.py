@@ -24,7 +24,6 @@ class ServerManager:
 	def listen(self):
 		self.sock, addr = self.server.accept()
 		self.sock.setblocking(False)
-		# Log.Info(f'New Connection')
 
 	def getCommand(self):
 		while True:
@@ -33,7 +32,6 @@ class ServerManager:
 				if cmd != b'':
 					return cmd.decode(errors='ignore')
 			except ConnectionResetError:
-				# Log.Info('Connection end')
 				self.sock.close()
 				self.sock = None
 				return None
@@ -42,7 +40,6 @@ class ServerManager:
 			try:
 				self.sock.send(b'')
 			except BrokenPipeError:
-				# Log.Info('Connection end')
 				self.sock.close()
 				self.sock = None
 				return None
@@ -51,9 +48,11 @@ class ServerManager:
 		try:
 			self.sock.send(response + b'\x00\x00\x00\x00\x00')
 		except ConnectionResetError or BrokenPipeError:
-			# Log.Info('Connection end')
 			self.sock.close()
 			self.sock = None
+			return None
+		except Exception as e:
+			Log.Error(e)
 			return None
 
 	def disconnect(self):
@@ -76,6 +75,9 @@ class ClientManager:
 				data = self.sock.recv(1024)
 			except BrokenPipeError or ConnectionError:
 				return False
+			except Exception as e:
+				print('[!]', e)
+				return False
 			if data != b'':
 				print(data.decode(), end='')
 			elif not self.send(b''):
@@ -90,6 +92,10 @@ class ClientManager:
 		except BrokenPipeError:
 			print('[!] Connection Close')
 			return False
+		except Exception as e:
+			print('[!]', e)
+			return False
+
 
 	def close(self):
 		self.sock.close()
