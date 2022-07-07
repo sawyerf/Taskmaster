@@ -2,21 +2,15 @@ import subprocess
 import shlex
 import datetime
 import threading
-import pwd
-import os
 
 from .var import SIGNALS
-from .log	import Log
+from .log import Log
 
 def getFd(arg: str):
 	if arg == 'discard':
 		arg = '/dev/null'
 	return open(arg, 'w+')
 
-def privilege_deescalate(user_uid, user_gid):
-	os.setgid(user_gid)
-	os.setuid(user_uid)
-	
 class Process(subprocess.Popen):
 	'''
 	Manage Process	
@@ -36,9 +30,6 @@ class Process(subprocess.Popen):
 		self.start = True
 		self.gracefulStop = False
 		self.status = 'STARTED'
-		pw = pwd.getpwnam(self.options.run_as)
-		user_uid       = pw.pw_uid
-		user_gid       = pw.pw_gid
 		super().__init__(shlex.split(self.options.cmd),
 			env=self.options.env,
 			cwd=self.options.workingdir,
@@ -46,7 +37,6 @@ class Process(subprocess.Popen):
 			stdin=getFd('discard'),
 			stdout=getFd(self.options.stdout),
 			stderr=getFd(self.options.stderr),
-			preexec_fn=privilege_deescalate(user_uid, user_gid)
 		)
 		self.start_time = datetime.datetime.now()
 		thr = threading.Thread(target=self.myWait, args=(self.options.exitcodes,))
